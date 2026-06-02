@@ -1,5 +1,9 @@
 #!/bin/bash
+set -e
 
-SERVER_IP=$1
+echo "Waiting for Minecraft to start..."
+sleep 45
 
-nmap -sV -Pn -p T:25565 $SERVER_IP
+SERVER_IP=$(cd terraform && terraform output -raw minecraft_public_ip)
+
+nmap -sV -Pn -p T:25565 "$SERVER_IP"
