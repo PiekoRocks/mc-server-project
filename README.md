@@ -54,30 +54,39 @@ mc-server-project/
 
 ---
 
-## Deployment Workflow
+## Automated Deployment Workflow
 
 ```text
 AWS Credentials
        │
        ▼
-Terraform
+deploy.sh
+       │
+       ├── terraform init
+       ├── terraform apply
+       └── generate inventory.ini
        │
        ▼
-Create EC2 Instance
-Create Security Group
+configure.sh
+       │
+       └── ansible-playbook
+              │
+              ├── Install Java 25
+              ├── Create minecraft user
+              ├── Download Minecraft server
+              ├── Accept EULA
+              ├── Create systemd service
+              └── Start Minecraft server
        │
        ▼
-Ansible
+test_server.sh
        │
-       ▼
-Install Java
-Download Minecraft
-Accept EULA
-Configure Service
+       └── nmap verification
        │
        ▼
 Minecraft Server Running
 ```
+
 
 ---
 
@@ -99,98 +108,7 @@ Before running this project, install and configure the following tools:
 
 ---
 
-## Terraform Deployment
-
-### 1. Initialize Terraform
-
-```bash
-cd terraform
-terraform init
-```
-
-### 2. Review the Execution Plan
-
-```bash
-terraform plan
-```
-
-### 3. Create the Infrastructure
-
-```bash
-terraform apply
-```
-
-After deployment, Terraform will output the **public IP address** of the Minecraft server.
-
----
-
-## Ansible Configuration
-
-Configure the Minecraft server using:
-
-```bash
-ansible-playbook -i ansible/inventory.ini ansible/setup_minecraft.yml
-```
-
-### Tasks Performed by the Playbook
-
-* Update system packages
-* Install Java 25
-* Create a dedicated `minecraft` user
-* Create the Minecraft server directory
-* Download the Minecraft server software
-* Accept the Minecraft EULA
-* Create a systemd service
-* Start and enable the Minecraft service
-* Disable automatic server pause when empty
-
----
-
-## Verification
-
-### Verify the Minecraft Service
-
-```bash
-systemctl status minecraft
-```
-
-### Verify Port 25565 Is Open
-
-```bash
-nmap -sV -Pn -p T:25565 <SERVER_IP>
-```
-
-#### Expected Output
-
-```text
-25565/tcp open minecraft
-```
-
-#### Example Output
-
-```text
-25565/tcp open minecraft Minecraft 26.1.2
-```
-
----
-
-## Connecting to the Server
-
-Open **Minecraft Java Edition** and connect using:
-
-```text
-<SERVER_IP>:25565
-```
-
-### Example
-
-```text
-54.235.29.172:25565
-```
-
----
-
-## Helper Scripts
+## Quick Start
 
 ### Deploy Infrastructure
 
@@ -198,16 +116,38 @@ Open **Minecraft Java Edition** and connect using:
 ./scripts/deploy.sh
 ```
 
+This script:
+
+* Initializes Terraform
+* Creates the AWS infrastructure
+* Retrieves the Minecraft server public IP
+* Automatically generates the Ansible inventory file
+
 ### Configure Minecraft
 
 ```bash
 ./scripts/configure.sh
 ```
 
-### Test the Server
+This script:
+
+* Installs Java 25
+* Creates the minecraft service account
+* Downloads the Minecraft server
+* Accepts the EULA
+* Creates and enables the systemd service
+* Starts the Minecraft server
+
+### Verify Deployment
 
 ```bash
-./scripts/test_server.sh <SERVER_IP>
+./scripts/test_server.sh
+```
+
+Expected output:
+
+```text
+25565/tcp open minecraft
 ```
 
 ### Destroy Infrastructure
@@ -216,22 +156,7 @@ Open **Minecraft Java Edition** and connect using:
 ./scripts/destroy.sh
 ```
 
----
-
-## Cleanup
-
-To remove all AWS resources created by Terraform:
-
-```bash
-terraform destroy
-```
-
-This command will:
-
-* Terminate the EC2 instance
-* Remove the associated security group
-
----
+This script removes all AWS resources created by Terraform.
 
 ## References
 
