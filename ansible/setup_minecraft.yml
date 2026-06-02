@@ -1,0 +1,87 @@
+---
+- name: Configure Minecraft Server
+  hosts: minecraft
+  become: true
+
+  tasks:
+    - name: Update packages
+      dnf:
+        name: "*"
+        state: latest
+
+    - name: Install Java and wget
+      dnf:
+        name:
+          - java-25-amazon-corretto-headless
+          - wget
+        state: present
+
+    - name: Create minecraft user
+      user:
+        name: minecraft
+        system: true
+        create_home: true
+        home: /opt/minecraft
+
+    - name: Create server directory
+      file:
+        path: /opt/minecraft/server
+        state: directory
+        owner: minecraft
+        group: minecraft
+        mode: "0755"
+
+    - name: Download Minecraft server
+      get_url:
+        url: https://piston-data.mojang.com/v1/objects/97ccd4c0ed3f81bbb7bfacddd1090b0c56f9bc51/server.jar
+        dest: /opt/minecraft/server/server.jar
+        owner: minecraft
+        group: minecraft
+        mode: "0755"
+
+    - name: Accept EULA
+      copy:
+        dest: /opt/minecraft/server/eula.txt
+        content: "eula=true\n"
+        owner: minecraft
+        group: minecraft
+
+    - name: Create Minecraft systemd service
+      copy:
+        dest: /etc/systemd/system/minecraft.service
+        content: |
+          [Unit]
+          Description=Minecraft Java Server
+          After=network.target
+
+          [Service]
+          WorkingDirectory=/opt/minecraft/server
+          User=minecraft
+          Group=minecraft
+          ExecStart=/usr/bin/java -Xms1G -Xmx2G -jar /opt/minecraft/server/server.jar nogui
+          KillSignal=SIGINT
+          TimeoutStopSec=60
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Disable empty server pause
+      lineinfile:
+        path: /opt/minecraft/server/server.properties
+        regexp: "^pause-when-empty-seconds="
+        line: "pause-when-empty-seconds=-1"
+        create: true
+        owner: minecraft
+        group: minecraft
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: true
+
+    - name: Enable and start Minecraft service
+      systemd:
+        name: minecraft
+        enabled: true
+        state: started
